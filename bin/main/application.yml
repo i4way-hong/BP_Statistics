@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: bp-sample14
+  # dev 기본: datasource 명시 안 하면 H2 (runtimeOnly) 자동 구성
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MariaDBDialect
+    show-sql: true
+
+jasypt:
+  encryptor:
+    password: password
+
+external:
+  oauth:
+    base-url: https://i4way.brightpattern.com
+    client-id: jkhong
+    client-secret: rhImGmmwqr5isgAyky5k6mfqSnMFxnp1eevxGFjrtRoMQ5atwK1P0O58yr6qwkWv
+    scope: i4way.brightpattern.com
+
+# BrightPattern 인증 설정
+brightpattern:
+  auth:
+    url: https://i4way.brightpattern.com/statsapi/auth
+    token: 9130ED79B0ED30122B6AECD51EF71FD025074F7201AA3EF613EDCBA0830663C5
+    tenant: i4way.brightpattern.com
+    username: jkhong
+    password: Password!234
+  subscription:
+    base-url: https://i4way.brightpattern.com/statsapi/subscription
+  auth.cookie: "AWSALB=lOazLsvBR0ckHbwafPhlXH/97YfXF9N/2YWcRKkkDvDo20cKKJZ3p8STIeFPNZogYEj141FO6DhA37g9Q3x36ZO99UcofUkid5HgzbdUXd6Nz44bqzymTXXjgnb7"
+
+logging:
+  level:
+    '[reactor.netty.transport]': DEBUG
+    '[reactor.netty.http.client]': DEBUG
+
+# 사용자 정의 커넥션/타임아웃 설정 (사용 시 @ConfigurationProperties(prefix="app.http") 바인딩 필요)
+app:
+  http:
+    wiretap: true
+    max-connections: 50
+    pending-acquire-timeout-ms: 5000
+    max-idle-time: 30s
+    evict-in-background: 30s
+    connect-timeout-ms: 5000
+    response-timeout-seconds: 20
