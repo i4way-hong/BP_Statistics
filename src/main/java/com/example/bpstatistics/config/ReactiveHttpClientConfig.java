@@ -3,9 +3,6 @@ package com.example.bpstatistics.config;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -27,7 +24,6 @@ import java.time.Duration;
 @Configuration
 @EnableConfigurationProperties(ReactiveHttpClientConfig.HttpProps.class)
 public class ReactiveHttpClientConfig {
-    private static final Logger log = LoggerFactory.getLogger(ReactiveHttpClientConfig.class);
 
     @Bean
     @ConditionalOnMissingBean
