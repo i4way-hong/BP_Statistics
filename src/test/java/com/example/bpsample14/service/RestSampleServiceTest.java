@@ -1,4 +1,4 @@
-package com.example.bpsample14.service;
+package com.example.bpstatistics.service;
 
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;

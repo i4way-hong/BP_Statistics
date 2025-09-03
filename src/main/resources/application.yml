@@ -1,6 +1,6 @@
 spring:
   application:
-    name: bp-sample14
+    name: bp-statistics
   # dev 기본: datasource 명시 안 하면 H2 (runtimeOnly) 자동 구성
   jpa:
     hibernate:

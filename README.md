@@ -1,4 +1,4 @@
-# BP Sample 14
+# BP Statistics
 
 요구사항 기반 Spring Boot 3.5.5 (Java 17) 샘플.
 
@@ -20,7 +20,7 @@
 1. 키 생성: 강한 패스프레이즈 선정 후 환경변수 설정
    Windows PowerShell: `$env:JASYPT_PASSWORD="my-strong-pass"`
 2. 암호화 명령(임시 Java Snippet):
-   `java -cp build\\classes\\java\\main;build\\libs\\bp-sample14-0.0.1-SNAPSHOT.jar org.jasypt.intf.cli.JasyptPBEStringEncryptionCLI input=password password=$env:JASYPT_PASSWORD algorithm=PBEWithHMACSHA512AndAES_256`
+   `java -cp build\\classes\\java\\main;build\\libs\\bp-statistics-0.0.1-SNAPSHOT.jar org.jasypt.intf.cli.JasyptPBEStringEncryptionCLI input=password password=$env:JASYPT_PASSWORD algorithm=PBEWithHMACSHA512AndAES_256`
 3. 결과 ENC(...) 문구를 `application.yml` 에 반영.
 
 ## Observability
