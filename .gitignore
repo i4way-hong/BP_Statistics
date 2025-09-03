@@ -27,6 +27,7 @@ replay_pid*
 .gradle/
 build/
 gradle-*.zip
+gradle-8.10.2/
 gradlew
 gradlew.bat
 
