@@ -4,14 +4,12 @@ import com.example.bpstatistics.service.BrightPatternAuthService;
 import com.example.bpstatistics.service.BrightPatternSubscriptionService;
 import com.example.bpstatistics.web.dto.BrightPatternSubscriptionRequest;
 import com.example.bpstatistics.web.dto.BrightPatternSubscriptionResponse;
-import jakarta.validation.Valid;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-// 변경 전: Spring Web annotation import 누락되어 컴파일 오류 발생
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,6 +22,10 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+
 @RestController
 @RequestMapping(path = "/api/brightpattern", produces = MediaType.APPLICATION_JSON_VALUE)
 
@@ -31,11 +33,14 @@ public class BrightPatternApiController {
     private static final Logger log = LoggerFactory.getLogger(BrightPatternApiController.class);
     private final BrightPatternAuthService authService;
     private final BrightPatternSubscriptionService subscriptionService;
+    private final ObjectMapper objectMapper;
 
     public BrightPatternApiController(BrightPatternAuthService authService,
-                                      BrightPatternSubscriptionService subscriptionService) {
+                                      BrightPatternSubscriptionService subscriptionService,
+                                      ObjectMapper objectMapper) {
         this.authService = authService;
         this.subscriptionService = subscriptionService;
+        this.objectMapper = objectMapper;
     }
 
     @PostMapping("/auth")
@@ -51,44 +56,70 @@ public class BrightPatternApiController {
         log.info("API 인증 정보요청");
         return authService.getTokenInfo(); }
 
-    // 변경 전 통합 엔드포인트 (필요 시 재활성화 가능)
-    // @PostMapping(value = "/subscriptions", consumes = MediaType.APPLICATION_JSON_VALUE)
-    // public Mono<ResponseEntity<?>> createUnified(@RequestBody(required = false) Map<String,Object> body) { /* 통합 로직 */ }
-
-    // 복원: DTO 기반 구독 생성 (기존 방식)
     @PostMapping(value = "/subscriptions", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<BrightPatternSubscriptionResponse> create(@Valid @RequestBody BrightPatternSubscriptionRequest req) {
-        log.info("API 구독 생성 요청(DTO)");
-        return subscriptionService.create(req);
+    public Mono<ResponseEntity<Object>> create(@RequestBody JsonNode body) {
+        log.info("API 구독 생성 요청(통합) - shape keys: {}", body != null && body.isObject() ? body.fieldNames().hasNext() ? body.fieldNames().next() : "(empty)" : "(non-object)");
+
+        if (body != null && body.isObject() && body.has("1")) {
+            Map<String, Object> raw = objectMapper.convertValue(body, new TypeReference<Map<String, Object>>(){});
+            return subscriptionService.createRaw(raw)
+                    .map(r -> ResponseEntity.ok().body((Object) r))
+                    .onErrorResume(e -> Mono.just(
+                            ResponseEntity.badRequest().body(Map.of(
+                                    "error", "ValidationError",
+                                    "message", e.getMessage() == null ? "구독 JSON 검증 실패" : e.getMessage()
+                            ))
+                    ));
+        }
+
+        if (body != null && body.isObject() && body.has("agent_grids")) {
+            try {
+                BrightPatternSubscriptionRequest req = objectMapper.convertValue(body, BrightPatternSubscriptionRequest.class);
+                return subscriptionService.create(req)
+                        .map(r -> ResponseEntity.ok().body((Object) r))
+                        .onErrorResume(e -> Mono.just(
+                                ResponseEntity.badRequest().body(Map.of(
+                                        "error", "ValidationError",
+                                        "message", e.getMessage() == null ? "구독 DTO 검증 실패" : e.getMessage()
+                                ))
+                        ));
+            } catch (IllegalArgumentException iae) {
+                return Mono.just(ResponseEntity.badRequest().body(Map.of(
+                        "error", "ValidationError",
+                        "message", "요청 본문을 DTO로 변환할 수 없습니다: " + iae.getMessage()
+                )));
+            }
+        }
+
+        return Mono.just(ResponseEntity.badRequest().body(Map.of(
+                "error", "InvalidRequest",
+                "message", "지원하지 않는 요청 형식입니다. {'1':{...}} 또는 {'agent_grids':[...]} 형태만 허용됩니다."
+        )));
     }
 
-    // Raw JSON 기반 구독 생성 (유효성 검증은 Service 내부 validateRawStructure 수행)
+    // 변경 전: 통합으로 인해 제거되었던 RAW 엔드포인트
+    // @PostMapping(value = "/subscriptions/raw", consumes = MediaType.APPLICATION_JSON_VALUE)
+    // public Mono<ResponseEntity<Object>> createRaw(@RequestBody Map<String,Object> raw) { /* 기존 구현 */ }
+    // 변경 후: 호환성 유지를 위한 RAW 엔드포인트 복원 (통합 로직과 동일한 처리 경로 사용)
     @PostMapping(value = "/subscriptions/raw", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<Object>> createRaw(@RequestBody Map<String,Object> raw) {
-        log.info("API 구독 생성 요청(RAW)");
+    public Mono<ResponseEntity<Object>> createRawCompat(@RequestBody JsonNode body) {
+        log.warn("호환 엔드포인트 호출: POST /subscriptions/raw (향후 제거 예정)");
+        if (body == null || !body.isObject()) {
+            return Mono.just(ResponseEntity.badRequest().body(Map.of(
+                    "error", "InvalidRequest",
+                    "message", "JSON 객체 본문이 필요합니다."
+            )));
+        }
+        Map<String, Object> raw = objectMapper.convertValue(body, new TypeReference<Map<String, Object>>(){});
         return subscriptionService.createRaw(raw)
                 .map(r -> ResponseEntity.ok().body((Object) r))
-                .onErrorResume(e -> Mono.<ResponseEntity<Object>>just(
+                .onErrorResume(e -> Mono.just(
                         ResponseEntity.badRequest().body(Map.of(
                                 "error", "ValidationError",
                                 "message", e.getMessage() == null ? "구독 JSON 검증 실패" : e.getMessage()
                         ))
                 ));
     }
-
-    // 선택적: Map -> DTO 변환 유틸 (현재는 사용하지 않지만 향후 통합 엔드포인트 복구 시 활용 가능)
-    // private BrightPatternSubscriptionRequest mapToDto(Map<String,Object> body) {
-    //     var dto = new BrightPatternSubscriptionRequest();
-    //     Object grids = body.get("agent_grids");
-    //     if (grids instanceof List<?> list) {
-    //         List<BrightPatternSubscriptionRequest.AgentGrid> converted = list.stream()
-    //                 .filter(m -> m instanceof Map)
-    //                 .map(m -> objectMapper.convertValue(m, BrightPatternSubscriptionRequest.AgentGrid.class))
-    //                 .toList();
-    //         dto.setAgent_grids(converted);
-    //     }
-    //     return dto;
-    // }
 
     @GetMapping("/subscriptions/{id}")
     public Mono<BrightPatternSubscriptionResponse> get(@PathVariable String id) {

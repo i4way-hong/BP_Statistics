@@ -479,12 +479,30 @@
         async function createSubscriptionRaw(){
             const btn = document.getElementById('btn-create-raw');
             btn.classList.add('btn-loading'); btn.disabled = true;
-            const metaBase = {method:'POST', url:'/api/brightpattern/subscriptions/raw', attempt:1, trigger:'manual-raw', time:new Date().toLocaleTimeString()};
+            // 변경 전: const metaBase = {method:'POST', url:'/api/brightpattern/subscriptions/raw', attempt:1, trigger:'manual-raw', time:new Date().toLocaleTimeString()};
+            // 통합 엔드포인트로 전환
+            const metaBase = {method:'POST', url:'/api/brightpattern/subscriptions', attempt:1, trigger:'manual-raw', time:new Date().toLocaleTimeString()};
             try {
                 const text = document.getElementById('rawJson').value;
                 if(!text.trim()) { updateResponse('Raw JSON이 비어 있습니다.', true, metaBase); return; }
                 try { JSON.parse(text); } catch(e){ updateResponse('JSON 파싱 오류: '+e.message, true, metaBase); return; }
-                const res = await fetch('/api/brightpattern/subscriptions/raw', { method:'POST', headers:{'Content-Type':'application/json'}, body:text });
+                // 변경 전: const res = await fetch('/api/brightpattern/subscriptions/raw', { method:'POST', headers:{'Content-Type':'application/json'}, body:text });
+                // 통합 엔드포인트 우선 호출
+                let res = await fetch('/api/brightpattern/subscriptions', { method:'POST', headers:{'Content-Type':'application/json'}, body:text });
+                // 호환성: 특정 오류(404/405/415) 시 /raw로 폴백
+                if(!res.ok && (res.status === 404 || res.status === 405 || res.status === 415)){
+                    const fallbackMeta = {...metaBase, url:'/api/brightpattern/subscriptions/raw', attempt:2, trigger:'manual-raw-fallback'};
+                    try {
+                        const res2 = await fetch('/api/brightpattern/subscriptions/raw', { method:'POST', headers:{'Content-Type':'application/json'}, body:text });
+                        const bodyTxt2 = await res2.text();
+                        updateResponse(bodyTxt2, !res2.ok, fallbackMeta);
+                        if(res2.ok){ clearSubscriptionInterval(); fetchSubscriptionData('auto-initial'); subscriptionFetchInterval = setInterval(()=>fetchSubscriptionData('auto'), 30000); }
+                        return;
+                    } catch(e2){
+                        updateResponse('Raw 구독 생성 실패(폴백도 실패): '+e2.message, true, fallbackMeta);
+                        return;
+                    }
+                }
                 const bodyTxt = await res.text();
                 updateResponse(bodyTxt, !res.ok, metaBase);
                 if(res.ok){ clearSubscriptionInterval(); fetchSubscriptionData('auto-initial'); subscriptionFetchInterval = setInterval(()=>fetchSubscriptionData('auto'), 30000); }

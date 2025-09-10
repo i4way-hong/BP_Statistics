@@ -36,8 +36,8 @@ brightpattern:
 
 logging:
   level:
-    '[reactor.netty.transport]': DEBUG
-    '[reactor.netty.http.client]': DEBUG
+    '[reactor.netty.transport]': INFO
+    '[reactor.netty.http.client]': INFO
 
 # 사용자 정의 커넥션/타임아웃 설정 (사용 시 @ConfigurationProperties(prefix="app.http") 바인딩 필요)
 app:

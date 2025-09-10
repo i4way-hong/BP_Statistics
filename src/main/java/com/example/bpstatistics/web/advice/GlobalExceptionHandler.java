@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
         body.put("message", ex.getBindingResult().getFieldError().getDefaultMessage());
         return ResponseEntity.badRequest().body(body);
     }
-
+ 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<?> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
         Map<String, Object> body = new HashMap<>();
